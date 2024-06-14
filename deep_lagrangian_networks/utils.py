@@ -40,7 +40,7 @@ def load_dataset(n_characters=3, filename="data/character_data.pickle", test_lab
     # Split the dataset in train and test set:
 
     # Random Test Set:
-    # test_idx = np.random.choice(len(data["labels"]), n_characters, replace=False)
+    #test_idx = np.random.choice(len(data["labels"]), n_characters, replace=False)
 
     # Specified Test Set:
     # test_char = ["e", "q", "v"]
@@ -87,9 +87,7 @@ def load_dataset(n_characters=3, filename="data/character_data.pickle", test_lab
             train_p = np.vstack((train_p, data["p"][i]))
             train_pd = np.vstack((train_pd, data["pdot"][i]))
 
-    return (train_labels, train_qp, train_qv, train_qa, train_p, train_pd, train_tau), \
-           (test_labels, test_qp, test_qv, test_qa, test_p, test_pd, test_tau, test_m, test_c, test_g),\
-           divider, dt_mean
+    return (train_labels, train_qp, train_qv, train_qa, train_p, train_pd, train_tau), (test_labels, test_qp, test_qv, test_qa, test_p, test_pd, test_tau, test_m, test_c, test_g),divider, dt_mean
 
 
 def parition_params(module_name, name, value, key):

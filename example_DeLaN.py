@@ -22,22 +22,21 @@ from deep_lagrangian_networks.utils import load_dataset, init_env
 
 
 if __name__ == "__main__":
-
     # Read Command Line Arguments:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", nargs=1, type=int, required=False, default=[True, ], help="Training using CUDA.")
+    parser.add_argument("-c", nargs=1, type=int, required=False, default=[False, ], help="Training using CUDA.")
     parser.add_argument("-i", nargs=1, type=int, required=False, default=[0, ], help="Set the CUDA id.")
     parser.add_argument("-s", nargs=1, type=int, required=False, default=[42, ], help="Set the random seed")
     parser.add_argument("-r", nargs=1, type=int, required=False, default=[1, ], help="Render the figure")
     parser.add_argument("-l", nargs=1, type=int, required=False, default=[0, ], help="Load the DeLaN model")
-    parser.add_argument("-m", nargs=1, type=int, required=False, default=[0, ], help="Save the DeLaN model")
+    parser.add_argument("-m", nargs=1, type=int, required=False, default=[1, ], help="Save the DeLaN model")
     seed, cuda, render, load_model, save_model = init_env(parser.parse_args())
 
     # Read the dataset:
     n_dof = 2
-    train_data, test_data, divider = load_dataset()
-    train_labels, train_qp, train_qv, train_qa, train_tau = train_data
-    test_labels, test_qp, test_qv, test_qa, test_tau, test_m, test_c, test_g = test_data
+    train_data, test_data, divider, _ = load_dataset(filename='data/character_data.pickle')
+    train_labels, train_qp, train_qv, train_qa, _, _, train_tau = train_data
+    test_labels, test_qp, test_qv, test_qa, _, _, test_tau, test_m, test_c, test_g = test_data
 
     print("\n\n################################################")
     print("Characters:")
@@ -92,7 +91,7 @@ if __name__ == "__main__":
 
     # Start Training Loop:
     t0_start = time.perf_counter()
-
+    st = time.time()
     epoch_i = 0
     while epoch_i < hyper['max_epoch'] and not load_model:
         l_mem_mean_inv_dyn, l_mem_var_inv_dyn = 0.0, 0.0
@@ -148,6 +147,9 @@ if __name__ == "__main__":
             print("Loss = {0:.3e}".format(l_mem), end=", ")
             print("Inv Dyn = {0:.3e} \u00B1 {1:.3e}".format(l_mem_mean_inv_dyn, 1.96 * np.sqrt(l_mem_var_inv_dyn)), end=", ")
             print("Power Con = {0:.3e} \u00B1 {1:.3e}".format(l_mem_mean_dEdt, 1.96 * np.sqrt(l_mem_var_dEdt)))
+
+    et = time.time()
+    total_time = et - st
 
     # Save the Model:
     if save_model:
@@ -219,6 +221,21 @@ if __name__ == "__main__":
 
     print("\n################################################")
     print("Plotting Performance:")
+    temp=hyper['max_epoch']
+    with open(f'DeLaN_{temp}.txt', 'w') as file:
+        info = [
+            "Performance:",
+            "                Torque MSE = {0:.3e}".format(err_tau),
+            "              Inertial MSE = {0:.3e}".format(err_m),
+            "Coriolis & Centrifugal MSE = {0:.3e}".format(err_c),
+            "         Gravitational MSE = {0:.3e}".format(err_g),
+            "      Comp Time per Sample = {0:.3e}s / {1:.1f}Hz".format(t_eval, 1. / t_eval),
+            "                Train time = {0:.3e}s".format(total_time)
+        ]
+        for i in info:
+            file.write(i + '\n')
+
+##############################################################################################################################################################################################
 
     # Alpha of the graphs:
     plot_alpha = 0.8
@@ -246,13 +263,13 @@ if __name__ == "__main__":
     fig.subplots_adjust(left=0.08, bottom=0.12, right=0.98, top=0.95, wspace=0.3, hspace=0.2)
     fig.canvas.set_window_title('Seed = {0}'.format(seed))
 
-    legend = [mp.patches.Patch(color=color_i[0], label="DeLaN"),
+    legend = [mp.patches.Patch(color=color_i[1], label="NN"),
               mp.patches.Patch(color="k", label="Ground Truth")]
 
     # Plot Torque
     ax0 = fig.add_subplot(2, 4, 1)
-    ax0.set_title(r"$\boldsymbol{\tau}$")
-    ax0.text(s=r"\textbf{Joint 0}", x=-0.35, y=.5, fontsize=12, fontweight="bold", rotation=90, horizontalalignment="center", verticalalignment="center", transform=ax0.transAxes)
+    ax0.set_title(r"Tau")
+    ax0.text(s="Joint 0", x=-0.35, y=.5, fontsize=12, fontweight="bold", rotation=90, horizontalalignment="center", verticalalignment="center", transform=ax0.transAxes)
     ax0.set_ylabel("Torque [Nm]")
     ax0.get_yaxis().set_label_coords(-0.2, 0.5)
     ax0.set_ylim(y_t_low[0], y_t_max[0])
@@ -262,10 +279,10 @@ if __name__ == "__main__":
     ax0.set_xlim(divider[0], divider[-1])
 
     ax1 = fig.add_subplot(2, 4, 5)
-    ax1.text(s=r"\textbf{Joint 1}", x=-.35, y=0.5, fontsize=12, fontweight="bold", rotation=90,
+    ax1.text(s="Joint 1", x=-.35, y=0.5, fontsize=12, fontweight="bold", rotation=90,
              horizontalalignment="center", verticalalignment="center", transform=ax1.transAxes)
 
-    ax1.text(s=r"\textbf{(a)}", x=.5, y=-0.25, fontsize=12, fontweight="bold", horizontalalignment="center",
+    ax1.text(s=r"A", x=.5, y=-0.25, fontsize=12, fontweight="bold", horizontalalignment="center",
              verticalalignment="center", transform=ax1.transAxes)
 
     ax1.set_ylabel("Torque [Nm]")
@@ -288,7 +305,7 @@ if __name__ == "__main__":
 
     # Plot Mass Torque
     ax0 = fig.add_subplot(2, 4, 2)
-    ax0.set_title(r"$\displaystyle\mathbf{H}(\mathbf{q}) \ddot{\mathbf{q}}$")
+    ax0.set_title("H(q)qdd")
     ax0.set_ylabel("Torque [Nm]")
     ax0.set_ylim(y_m_low[0], y_m_max[0])
     ax0.set_xticks(ticks)
@@ -297,7 +314,7 @@ if __name__ == "__main__":
     ax0.set_xlim(divider[0], divider[-1])
 
     ax1 = fig.add_subplot(2, 4, 6)
-    ax1.text(s=r"\textbf{(b)}", x=.5, y=-0.25, fontsize=12, fontweight="bold", horizontalalignment="center",
+    ax1.text(s="b", x=.5, y=-0.25, fontsize=12, fontweight="bold", horizontalalignment="center",
              verticalalignment="center", transform=ax1.transAxes)
 
     ax1.set_ylabel("Torque [Nm]")
@@ -317,7 +334,7 @@ if __name__ == "__main__":
 
     # Plot Coriolis Torque
     ax0 = fig.add_subplot(2, 4, 3)
-    ax0.set_title(r"$\displaystyle\mathbf{c}(\mathbf{q}, \dot{\mathbf{q}})$")
+    ax0.set_title("c(q,qdd)")
     ax0.set_ylabel("Torque [Nm]")
     ax0.set_ylim(y_c_low[0], y_c_max[0])
     ax0.set_xticks(ticks)
@@ -326,7 +343,7 @@ if __name__ == "__main__":
     ax0.set_xlim(divider[0], divider[-1])
 
     ax1 = fig.add_subplot(2, 4, 7)
-    ax1.text(s=r"\textbf{(c)}", x=.5, y=-0.25, fontsize=12, fontweight="bold", horizontalalignment="center",
+    ax1.text(s="c", x=.5, y=-0.25, fontsize=12, fontweight="bold", horizontalalignment="center",
              verticalalignment="center", transform=ax1.transAxes)
 
     ax1.set_ylabel("Torque [Nm]")
@@ -346,7 +363,7 @@ if __name__ == "__main__":
 
     # Plot Gravity
     ax0 = fig.add_subplot(2, 4, 4)
-    ax0.set_title(r"$\displaystyle\mathbf{g}(\mathbf{q})$")
+    ax0.set_title("g(q)")
     ax0.set_ylabel("Torque [Nm]")
     ax0.set_ylim(y_g_low[0], y_g_max[0])
     ax0.set_xticks(ticks)
@@ -355,7 +372,7 @@ if __name__ == "__main__":
     ax0.set_xlim(divider[0], divider[-1])
 
     ax1 = fig.add_subplot(2, 4, 8)
-    ax1.text(s=r"\textbf{(d)}", x=.5, y=-0.25, fontsize=12, fontweight="bold", horizontalalignment="center",
+    ax1.text(s="d", x=.5, y=-0.25, fontsize=12, fontweight="bold", horizontalalignment="center",
              verticalalignment="center", transform=ax1.transAxes)
 
     ax1.set_ylabel("Torque [Nm]")

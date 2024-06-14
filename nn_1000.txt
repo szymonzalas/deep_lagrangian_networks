@@ -1,0 +1,7 @@
+Performance:
+                Torque MSE = 2.624e-03
+              Inertial MSE = 1.201e-03
+Coriolis & Centrifugal MSE = 8.827e-04
+         Gravitational MSE = 1.694e-03
+      Comp Time per Sample = 8.271e-05s / 12090.0Hz
+                Train time = 1.446e+03s
